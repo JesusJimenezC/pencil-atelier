@@ -2,6 +2,25 @@
 
 All notable changes to `pencil-atelier` are documented here. This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-04-16
+
+### Context
+
+Claude Code skills support `model` and `effort` frontmatter fields (see the [official skill frontmatter reference](https://docs.claude.com/en/docs/claude-code/skills)). v0.1.1 shipped without declaring them, so every skill inherited the session model and effort regardless of the workload's reasoning depth. v0.1.2 picks a deliberate `model` + `effort` per skill so each one runs at the correct trade-off between reasoning quality and token cost.
+
+### Changed
+
+- **Per-skill `model` + `effort` in frontmatter** (none of these change the skill content — only the configuration line added to the YAML frontmatter of each `SKILL.md`):
+  - `/pencil-analyze` → `model: sonnet`, `effort: high`. The `pencil-analyzer` subagent already runs on Opus with high effort; the skill itself only transforms the returned structured block into `design.md` prose, which does not need Opus reasoning.
+  - `/pencil-design` → `model: opus`, `effort: xhigh`. The most demanding skill (brief + five house rules + authoring by construction). `xhigh` is the recommended default on Opus 4.7 per the [model-config docs](https://docs.claude.com/en/docs/claude-code/model-config#adjust-effort-level).
+  - `/pencil-audit` → `model: sonnet`, `effort: low`. Pass-through: dispatches `pencil-auditor` and returns its report verbatim. Low effort keeps the skill fast and preserves the "no summarization" discipline.
+  - `/pencil-to-code` → `model: sonnet`, `effort: high`. Transpilation with stack detection and pixel→class mapping. Sonnet with high effort handles this without paying the Opus premium.
+
+### Notes
+
+- `maxTurns` is **not** a valid skill frontmatter field (it is a subagent field). It is not added to any skill, and recommendations to add it to skills should be rejected.
+- Field values used — `model: opus | sonnet`, `effort: low | high | xhigh` — are all from the documented sets. Aliases, not pinned model IDs, so the skills follow alias upgrades over time.
+
 ## [0.1.1] - 2026-04-16
 
 ### Context
