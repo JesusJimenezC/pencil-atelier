@@ -1,0 +1,30 @@
+{
+  "name": "pencil-atelier",
+  "version": "0.1.0",
+  "description": "Library-agnostic design-quality toolkit for Pencil (.pen) files and any companion codebase. Enforces a universal 4px-grid sizing scale, variable-first design tokens, and component extraction at the second repetition - independent of CSS framework. Ships three read-only subagents (`pencil-auditor` for quality enforcement, `pencil-navigator` for token-efficient localization inside dense .pen files, `pencil-analyzer` for semantic-brief extraction), a `/pencil-analyze` command that persists a `design.md` brief from an existing .pen, a `/pencil-design` command that authors new designs under the rules (consulting design.md when present), a `/pencil-audit` command that validates existing designs and code, and a `/pencil-to-code` command that transpiles designs to code; the latter auto-detects Tailwind CSS in the target project and uses its class mapping when present, falling back to raw pixel values from the design otherwise.",
+  "author": {
+    "name": "Jesus Jimenez Cordero",
+    "email": "jjimenezc.code@pm.me",
+    "url": "https://github.com/JesusJimenezC"
+  },
+  "keywords": [
+    "pencil",
+    "design",
+    "linter",
+    "design-tokens",
+    "design-system",
+    "design-to-code",
+    "quality-assurance",
+    "claude-code",
+    "claude-plugin"
+  ],
+  "homepage": "https://github.com/JesusJimenezC/pencil-atelier",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JesusJimenezC/pencil-atelier.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JesusJimenezC/pencil-atelier/issues"
+  },
+  "license": "GPL-3.0-or-later"
+}

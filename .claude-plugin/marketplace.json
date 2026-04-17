@@ -1,0 +1,38 @@
+{
+  "name": "pencil-atelier-marketplace",
+  "owner": {
+    "name": "Jesus Jimenez Cordero",
+    "email": "jjimenezc.code@pm.me"
+  },
+  "metadata": {
+    "description": "Marketplace for the pencil-atelier design-quality toolkit. Bundles authoring, auditing, analysis, and transpile skills for Pencil (.pen) design files, backed by three read-only subagents.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "pencil-atelier",
+      "source": "./",
+      "description": "Library-agnostic design-quality toolkit for Pencil (.pen) files. Enforces a universal 4px-grid sizing scale, variable-first tokens, component extraction at the second repetition, and persistent design briefs across sessions.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Jesus Jimenez Cordero",
+        "email": "jjimenezc.code@pm.me",
+        "url": "https://github.com/JesusJimenezC"
+      },
+      "homepage": "https://github.com/JesusJimenezC/pencil-atelier",
+      "repository": "https://github.com/JesusJimenezC/pencil-atelier.git",
+      "license": "GPL-3.0-or-later",
+      "keywords": [
+        "pencil",
+        "design",
+        "linter",
+        "design-tokens",
+        "design-system",
+        "design-to-code",
+        "quality-assurance",
+        "claude-code",
+        "claude-plugin"
+      ]
+    }
+  ]
+}
