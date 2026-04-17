@@ -130,17 +130,31 @@ Loads `design.md` first (if it exists) so that role-named tokens (`surface-eleva
 
 ### Subagents (read-only, invoked by the skills)
 
+The plugin ships three subagents. None of them mutate files — they observe, reason, and report. The slash commands do all the writing. Each subagent has a deliberately-chosen model + effort profile so you get the right trade-off between depth and latency for the kind of work it does.
+
 #### `pencil-analyzer` — semantic brief extractor
 
-Runs Opus at `effort: high`. Given a `.pen` file, returns a structured block across five axes plus scale parity and a token-vocabulary map. Never writes files. Deep reasoning is the point — cutting effort here erodes the brief's coherence.
+- **Purpose.** Look at a `.pen` file and infer its visual language. It characterizes the file across five axes — atmosphere, palette roles, geometry character, depth character, typography character — plus a scale-parity note (does the file actually live on the 4px grid?) and a token-vocabulary map (which tokens exist, which roles they play).
+- **Invoked by.** `/pencil-analyze`. The skill dispatches the subagent via the `Task` tool, then translates its structured return block into the eight-section `design.md` prose.
+- **Returns.** A structured brief block. Never writes `design.md` itself — that is the calling skill's job. Never mutates the `.pen`.
+- **Runtime profile.** `model: opus`, `effort: high`, `maxTurns: 30`. Opus because the inference is genuinely hard: reading an entire design and deciding whether it feels "editorial" or "utilitarian" is a deep-reasoning task and cutting effort here visibly degrades the brief. High turn budget lets it cross-check consistency across many frames.
+- **Discipline.** Honest-over-aesthetic. If the `.pen` is incoherent, the brief says so under `## Known Divergences` instead of fabricating a clean story.
 
 #### `pencil-auditor` — quality enforcer
 
-Runs Sonnet at `effort: medium`. Systematically checks every frame and every companion-code stylesheet against R1/R2/R3. Returns a structured divergence report. Never mutates anything.
+- **Purpose.** Systematically enforce the four house rules across both the `.pen` and the companion codebase. Finds off-scale values (R3), literals where a token exists (R1), repeated structures that should be components (R2), and parity drift between design and code.
+- **Invoked by.** `/pencil-audit`. The skill returns the auditor's report verbatim — no summary layer, no reformat.
+- **Returns.** A structured divergence report (one line per finding) or a clean-status confirmation. Never modifies `.pen` files or source code.
+- **Runtime profile.** `model: sonnet`, `effort: medium`, `maxTurns: 25`. Sonnet balances rigor and speed — auditing is mostly rule-matching, which does not need Opus-level reasoning, but it does need enough quality to distinguish "valid off-scale exception" from "drift". Medium turn budget matches the breadth of a typical audit sweep.
+- **Discipline.** Reports only. Never claims work is "fixed" or "resolved" — those words belong to whoever acts on the report.
 
 #### `pencil-navigator` — compact localizer
 
-Runs Haiku at `effort: low`. Translates vague spatial questions about `.pen` files ("where is the pricing card?", "which frame holds the mobile hero?") into compact ID + breadcrumb records. Used internally by the authoring skill to avoid flooding the main context with raw `batch_get` output. Speed matters more than depth — that's why it's on Haiku.
+- **Purpose.** Translate vague spatial questions about `.pen` files ("where is the pricing card?", "which frame holds the mobile hero?", "which components reference `$radius.lg`?") into compact match records — ID + breadcrumb + minimal metadata — instead of raw node payloads. Protects the main agent's context window from `batch_get` output dumps.
+- **Invoked by.** `/pencil-design` internally during its pipeline (Step 5), and on-demand from any skill that needs to locate frames, repeated structures, empty canvas space, or token usages without flooding context.
+- **Returns.** Grep-able ID + breadcrumb records. Never returns whole subtrees — if the caller needs depth, the caller re-dispatches a targeted `batch_get`.
+- **Runtime profile.** `model: haiku`, `effort: low`, `maxTurns: 10`. Haiku because the job is lookup, not reasoning — speed matters far more than depth, and over-thinking a localization query wastes time and tokens. Low turn budget reflects that most queries resolve in two or three tool calls.
+- **Discipline.** Silent on intent. Does not second-guess why the caller wants the IDs; just returns them.
 
 ### The `design.md` contract
 
@@ -174,4 +188,4 @@ All four commands become namespaced as `/pencil-atelier:<command>` (e.g., `/penc
 
 ## License
 
-GPL-3.0-or-later. See `LICENSE`.
+GPL-3.0-or-later. See [`LICENSE.md`](./LICENSE.md) for the full text.
