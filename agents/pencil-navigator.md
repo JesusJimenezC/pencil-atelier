@@ -4,6 +4,7 @@ description: Read-only localizer for Pencil (.pen) files. Given a feature name, 
 model: haiku
 effort: low
 maxTurns: 10
+color: cyan
 tools: Read, Glob, Grep, mcp__pencil__get_editor_state, mcp__pencil__get_variables, mcp__pencil__batch_get, mcp__pencil__search_all_unique_properties, mcp__pencil__find_empty_space_on_canvas
 ---
 

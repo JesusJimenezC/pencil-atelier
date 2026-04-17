@@ -4,6 +4,7 @@ description: Audits Pencil (.pen) design files and their companion codebase for 
 model: sonnet
 effort: medium
 maxTurns: 25
+color: yellow
 tools: Read, Grep, Glob, Bash, mcp__pencil__get_editor_state, mcp__pencil__get_variables, mcp__pencil__batch_get, mcp__pencil__search_all_unique_properties
 ---
 

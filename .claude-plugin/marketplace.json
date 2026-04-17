@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Marketplace for the pencil-atelier design-quality toolkit. Bundles authoring, auditing, analysis, and transpile skills for Pencil (.pen) design files, backed by three read-only subagents.",
-    "version": "0.1.2"
+    "version": "0.1.3"
   },
   "plugins": [
     {
       "name": "pencil-atelier",
       "source": "./",
       "description": "Library-agnostic design-quality toolkit for Pencil (.pen) files. Enforces a universal 4px-grid sizing scale, variable-first tokens, component extraction at the second repetition, and persistent design briefs across sessions. Includes safe-apply pipeline (R5) that prevents `replace_all_matching_properties` variable-escape corruption.",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "author": {
         "name": "Jesus Jimenez Cordero",
         "email": "jjimenezc.code@pm.me",

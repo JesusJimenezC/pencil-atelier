@@ -2,6 +2,24 @@
 
 All notable changes to `pencil-atelier` are documented here. This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-04-16
+
+### Context
+
+Claude Code surfaces a subagent `color` in the UI when the agent is dispatched, making it visually distinguishable in the transcript. v0.1.3 assigns a deliberate color per subagent so users can identify at a glance which read-only agent is running.
+
+### Changed
+
+- **Per-subagent `color` in frontmatter** (visual affordance only — no logic change):
+  - `pencil-analyzer` → `color: purple`. Deep semantic extraction on Opus; purple signals the heaviest reasoning pass.
+  - `pencil-auditor` → `color: yellow`. Quality-assurance and warnings; yellow matches the "caution / findings" role.
+  - `pencil-navigator` → `color: cyan`. Fast localization on Haiku; cyan signals the lightweight, high-frequency helper.
+
+### Notes
+
+- `color` is a subagent-only frontmatter field (not a skill field). Skills are not colorized.
+- Values are from the documented Claude Code color set.
+
 ## [0.1.2] - 2026-04-16
 
 ### Context

@@ -4,6 +4,7 @@ description: Read-only semantic-brief extractor for Pencil (.pen) files. Given a
 model: opus
 effort: high
 maxTurns: 30
+color: purple
 tools: Read, Glob, Grep, mcp__pencil__get_editor_state, mcp__pencil__get_guidelines, mcp__pencil__get_variables, mcp__pencil__batch_get, mcp__pencil__search_all_unique_properties, mcp__pencil__get_screenshot
 ---
 
