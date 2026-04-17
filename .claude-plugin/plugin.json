@@ -19,12 +19,7 @@
     "claude-plugin"
   ],
   "homepage": "https://github.com/JesusJimenezC/pencil-atelier",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/JesusJimenezC/pencil-atelier.git"
-  },
-  "bugs": {
-    "url": "https://github.com/JesusJimenezC/pencil-atelier/issues"
-  },
+  "repository": "https://github.com/JesusJimenezC/pencil-atelier.git",
+  "bugs": "https://github.com/JesusJimenezC/pencil-atelier/issues",
   "license": "GPL-3.0-or-later"
 }
