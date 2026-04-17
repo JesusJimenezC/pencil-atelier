@@ -1,5 +1,7 @@
 # pencil-atelier
 
+![License: Proprietary](https://img.shields.io/badge/license-Proprietary-red)
+
 A Claude Code plugin that turns [Pencil](https://pencil.dev) (`.pen`) design files and their companion codebase into a single, consistent, auditable design system — regardless of which CSS framework the project uses.
 
 ---
@@ -193,4 +195,4 @@ All four commands become namespaced as `/pencil-atelier:<command>` (e.g., `/penc
 
 ## License
 
-GPL-3.0-or-later. See [`LICENSE.md`](./LICENSE.md) for the full text.
+Proprietary — non-commercial, no derivatives, no patent grant. See [`LICENSE.md`](./LICENSE.md) for the full text. For commercial licensing inquiries, contact jjimenezc.code@pm.me.
