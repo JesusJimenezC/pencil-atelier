@@ -21,7 +21,7 @@
       },
       "homepage": "https://github.com/JesusJimenezC/pencil-atelier",
       "repository": "https://github.com/JesusJimenezC/pencil-atelier.git",
-      "license": "LicenseRef-Proprietary",
+      "license": "GPL-3.0-or-later",
       "keywords": [
         "pencil",
         "design",
