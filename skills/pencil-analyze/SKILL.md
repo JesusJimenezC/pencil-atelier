@@ -5,6 +5,8 @@ when_to_use: Before starting a new feature in an existing Pencil project, when o
 argument-hint: "[path-to.pen]"
 disable-model-invocation: true
 allowed-tools: mcp__pencil__get_editor_state mcp__pencil__get_guidelines mcp__pencil__get_variables mcp__pencil__batch_get mcp__pencil__search_all_unique_properties mcp__pencil__get_screenshot
+model: sonnet
+effort: high
 ---
 
 # /pencil-analyze

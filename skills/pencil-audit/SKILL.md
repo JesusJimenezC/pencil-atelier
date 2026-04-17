@@ -4,6 +4,8 @@ description: Run a complete design-quality audit over any repository that contai
 when_to_use: Before commits, before opening PRs, after Pencil design edits, or any time you want confidence that design and code share one consistent vocabulary.
 argument-hint: "[path-to.pen-or-scope]"
 disable-model-invocation: true
+model: sonnet
+effort: low
 ---
 
 # /pencil-audit

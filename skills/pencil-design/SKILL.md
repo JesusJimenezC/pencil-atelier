@@ -5,6 +5,8 @@ when_to_use: The user asks to "design a component in Pencil", "create a frame", 
 argument-hint: "[feature-name-or-frame-description]"
 disable-model-invocation: true
 allowed-tools: mcp__pencil__get_editor_state mcp__pencil__get_guidelines mcp__pencil__get_variables mcp__pencil__set_variables mcp__pencil__batch_get mcp__pencil__batch_design mcp__pencil__search_all_unique_properties mcp__pencil__find_empty_space_on_canvas mcp__pencil__get_screenshot mcp__pencil__snapshot_layout mcp__pencil__open_document
+model: opus
+effort: xhigh
 ---
 
 # /pencil-design

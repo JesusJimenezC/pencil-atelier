@@ -5,6 +5,8 @@ when_to_use: Transferring a finalized Pencil frame or component into a codebase,
 argument-hint: "[frame-id-or-component-name]"
 disable-model-invocation: true
 allowed-tools: mcp__pencil__get_editor_state mcp__pencil__get_variables mcp__pencil__batch_get mcp__pencil__search_all_unique_properties
+model: sonnet
+effort: high
 ---
 
 # /pencil-to-code
