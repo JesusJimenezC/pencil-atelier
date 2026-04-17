@@ -289,6 +289,51 @@ Before handing off, walk through:
 
 If any box is unchecked, fix the `.pen` before returning control to the user. If uncertain, run `/pencil-audit` - it performs R1/R2/R3 checks independently and will surface anything missed.
 
+## Safe-apply discipline (mandatory for `$`-values)
+
+Every write path that stores a variable reference (R1 promotion, token fix, corruption repair, ad-hoc refactor, bulk rename) MUST go through `batch_design` with explicit `U(nodeId, { prop: "$token" })` operations. This is not a recommendation — it prevents a silent data-corruption class that previously ruined an entire production `.pen` file.
+
+### Rule 1 — Never use `replace_all_matching_properties` for `$`-values
+
+`mcp__pencil__replace_all_matching_properties` escapes `$` into `\$` internally when the `to:` value is a variable reference. The stored string becomes `\$brand` (literal backslash + `$` + `brand`), which does NOT resolve to the declared `$brand` token. Renderers treat it as an unknown value and fall back to defaults (usually black). The tool reports success and no error surfaces until a human opens the design and sees a black screen.
+
+This is the exact corruption that R5 in `/pencil-audit` detects. Do not use the tool at all for `$`-values. It is a footgun without a safe mode for this input class.
+
+Allowed uses of `replace_all_matching_properties`: raw-value to raw-value rewrites (e.g., `#EA580C` → `#DC2626`). Forbidden: anything where the target starts with `$`.
+
+### Rule 2 — All `$`-writes go through `batch_design` U() ops
+
+`batch_design` preserves `$` literally — the token is stored as-is and resolves at render time. Use it for every write that touches a variable reference, whether you are promoting, repairing, or renaming.
+
+```
+batch_design([
+  U("frameA", { fill: "$brand", cornerRadius: "$radius-md" }),
+  U("frameB", { padding: ["$spacing-md", "$spacing-lg", "$spacing-md", "$spacing-lg"] }),
+])
+```
+
+For bulk promotion (the legitimate use-case that historically invited `replace_all_matching_properties`), enumerate the target nodes via `search_all_unique_properties` + `batch_get`, then emit one `U()` per node in batches of ≤25 operations per `batch_design` call. The extra verbosity is the price of correctness.
+
+### Rule 3 — Nested properties take full objects, not dot-paths
+
+Pencil's nested shapes (`stroke`, `effects[*].shadow`, multi-layer fills) require the full object in the update. Do not use dot-path keys:
+
+```
+❌ U("frameA", { "stroke.fill": "$gray-200", "stroke.thickness": 1 })   // silently no-op on some shapes
+✅ U("frameA", { stroke: { fill: "$gray-200", thickness: 1 } })          // correct
+```
+
+When repairing a nested property that was previously set, read the existing nested object first (via `batch_get`) and pass it back with the corrected field — overwriting with a partial object can drop sibling fields.
+
+### Rule 4 — Post-apply validation is non-negotiable
+
+A `batch_design` call that returns `success: true` proves only that the API accepted the operation, not that the design renders correctly. After every batch that touches `$`-values:
+
+1. Re-run `batch_get` on the written nodes. Scan the returned JSON for any value starting with `\$`. If any remain, they leaked past the write — stop and investigate before writing more.
+2. Call `get_screenshot` on the root frame(s) touched. Compare against the brief. A clean JSON that renders black is a failure, not a success.
+
+Silent failure is the default mode of this class of bug. Treat unvalidated writes as untested writes.
+
 ## Anti-patterns to refuse
 
 - Emitting `#EA580C` directly when `$brand` exists with that value. Reference the token.
@@ -302,6 +347,10 @@ If any box is unchecked, fix the `.pen` before returning control to the user. If
 - Mixing device label and breakpoint token from different rows of the R3 table (e.g., `Home__tablet-lg-1024` - `tablet` belongs to `md-768`, not `lg-1024`; the correct name is `Home__laptop-lg-1024` or `Home__tablet-md-768`). Device <-> breakpoint pairings are fixed by the R3 table; do not recombine.
 - Omitting either the device label or the breakpoint token ("just one or the other is enough"). Both are required - the device label answers the human question ("which form factor?"), the breakpoint token answers the engineering question ("which Tailwind prefix?"). Dropping either cripples the grep cookbook.
 - Using a width that does not belong to the six canonical breakpoint values (e.g., a `lg` frame at 1100 px instead of 1024). If you need a width between two breakpoints, pick the lower one and design to it - breakpoints are thresholds, not absolutes.
+- Calling `replace_all_matching_properties` to promote a raw value to a variable reference ("this is faster than writing 200 U() ops"). It escapes `$` into `\$` and ruins every node it touches; the damage is silent until a human sees the render. There is no fast path for this — enumerate, batch, verify.
+- Writing nested shape updates as dot-paths (`{ "stroke.fill": "$X" }`) instead of full objects (`{ stroke: { fill: "$X", thickness: 1 } }`). The dot-path form silently no-ops on some property shapes, leaving the old value in place and wasting the rest of the batch's context.
+- Declaring a batch "done" because `batch_design` returned `success: true`. Success at the API layer ≠ correct render. Re-read the written nodes for residual `\$` and screenshot the root frame before handing off.
+- Overwriting a nested object (`stroke`, `effects[*]`) with a partial object when repairing one field. Read the existing nested value first, mutate the target field, write back the complete object.
 
 ## Tips for Success
 

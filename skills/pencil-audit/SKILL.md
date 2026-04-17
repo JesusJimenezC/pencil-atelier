@@ -20,7 +20,15 @@ Manual command to verify design quality across a Pencil-based project. Runs a re
 
 ## What it checks
 
-The audit delegates to the `pencil-auditor` subagent, which applies three rule families:
+The audit delegates to the `pencil-auditor` subagent, which applies four rule families. **Rule priority: R5 > R1 > R3 > R2.** R5 takes precedence because it describes a broken render, not a style choice — any R5 finding is a release blocker.
+
+### R5 - Variable-reference integrity (release blocker)
+
+String-valued properties whose value begins with `\$` (literal backslash + `$`) instead of the canonical `$`. These arise when a writer tool escapes `$` — notably `replace_all_matching_properties` when promoting hex/numeric values to variable references. The resulting string does NOT resolve to the declared variable; renderers fall back to defaults (usually black), silently ruining the design.
+
+Example: `fill="\$white"` → should be `fill="$white"` (restore via `batch_design` U() op).
+
+**Any R5 finding is a release blocker.** Fix R5 BEFORE acting on R1/R3 — promoting tokens over a corrupted property compounds the damage. The safe fix path is `batch_design` with explicit `U(nodeId, { prop: "$token" })` ops, which preserve `$` literally. Never use `replace_all_matching_properties` for values starting with `$` — it is the origin of R5 corruption.
 
 ### R1 - Variable-first design tokens
 
@@ -48,7 +56,7 @@ When the user types `/pencil-audit` (or asks for a design-quality audit), spawn 
 
 ```
 subagent_type: pencil-auditor
-prompt: "Run a full design-quality audit over this repository. Detect all .pen files and code files under standard paths, apply rules R1 (variables), R2 (reuse), and R3 (scale parity), and produce the structured report. Do not modify any files."
+prompt: "Run a full design-quality audit over this repository. Detect all .pen files and code files under standard paths, apply rules R5 (variable-ref integrity), R1 (variables), R2 (reuse), and R3 (scale parity), and produce the structured report. R5 scan must run first on every .pen file. Do not modify any files."
 ```
 
 Return the subagent's report **verbatim** to the user. Do not summarize, edit, or add your own commentary to the findings.
@@ -70,7 +78,7 @@ The subagent returns a structured report. Example PASS:
 Design and code are in sync with the standard.
 ```
 
-Example FAIL:
+Example FAIL with corruption blocker:
 
 ```
 # Pencil Lint Audit
@@ -79,36 +87,42 @@ Example FAIL:
 - Pencil files scanned: 1
 - Code files scanned: 127
 - Styling technology detected: tailwind
+- R5 (corruption) blockers: 247
 - R1 violations: 4
 - R2 candidates: 1
 - R3 violations (Pencil): 12
 - R3 violations (code): 3
-- Overall: FAIL - 20 total issues
+- Overall: FAIL - 267 total issues — RELEASE BLOCKER: corruption detected
+
+## R5 - Corrupted variable references (release blocker)
+design/ui.pen#heroTitle - fill="\$white" -> restore to "$white"
+design/ui.pen#card1 - cornerRadius="\$radius-md" -> restore to "$radius-md"
+design/ui.pen#btn - stroke.fill="\$gray-200" -> restore to "$gray-200"
 
 ## R1 - Variable-first violations
-design/ui.pen#card1 - fillColor=#EA580C -> should reference $brand
+design/ui.pen#card2 - fillColor=#EA580C -> should reference $brand
 
 ## R3 - Scale violations (Pencil)
 design/ui.pen#heroTitle - fontSize=38 -> snap to 36
-design/ui.pen#pill - cornerRadius=20 -> snap to 24
-
-## R3 - Scale violations (code)
-src/components/Card.astro:42 - text-[13px] -> snap to 14
 
 ## Recommendations
-1. Apply snaps listed above before commit
-2. Consider extracting repeated "Card" pattern to reusable component
+1. Restore every `\$X` → `$X` via `batch_design` U() ops FIRST (no `replace_all_matching_properties`). After the batch, `batch_get` the same nodes and confirm zero `\$` remain; screenshot the root frame to rule out black fallbacks.
+2. Re-run `/pencil-audit` after corruption is cleared.
+3. Only then apply R1/R3 snaps — promoting tokens over corrupted values compounds damage.
+4. DO NOT use `replace_all_matching_properties` for variable promotion. It escapes `$` into `\$` and is the origin of R5 corruption.
 ```
 
 ## If divergences are found
 
-Apply the suggested snaps to bring the design/code back onto the scale. If the companion project uses a styling library with an equivalent scale (e.g., Tailwind CSS), follow up with `/pencil-to-code` to translate the raw pixel values into the library's class names.
+**R5 corruption first, always.** Restore every `\$X` → `$X` via `batch_design` with explicit `U(nodeId, { prop: "$token" })` ops — never `replace_all_matching_properties`, which is the origin of the corruption. Re-run `/pencil-audit` to confirm zero blockers before touching R1/R3.
 
-Do **not** commit with active divergences. The plugin's philosophy is zero tolerance for scale drift - small inconsistencies compound into noticeable visual disharmony across a project.
+Once R5 is clean, apply R1/R3 snaps via `batch_design` U() ops to bring the design back onto the scale. Bulk token promotion MUST also go through `batch_design` U() (not `replace_all_matching_properties`) to avoid reintroducing R5 corruption. If the companion project uses a styling library with an equivalent scale (e.g., Tailwind CSS), follow up with `/pencil-to-code` to translate raw pixel values into the library's class names.
+
+Do **not** commit with active divergences — especially not with R5 blockers. The plugin's philosophy is zero tolerance for scale drift and zero tolerance for corrupted variable references.
 
 ## Related files
 
 - `agents/pencil-auditor.md` - the subagent this skill dispatches
-- `skills/pencil-design/SKILL.md` - preventive companion; authors new `.pen` designs already compliant with the rules this skill audits
+- `skills/pencil-design/SKILL.md` - preventive companion; authors new `.pen` designs already compliant with the rules this skill audits, and bans `replace_all_matching_properties` for `$`-values at the source
 - `skills/pencil-to-code/SKILL.md` - translates a compliant design into code (Tailwind-aware when installed)
 - `README.md` - plugin installation, configuration, and philosophy

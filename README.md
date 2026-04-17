@@ -59,22 +59,24 @@ This creates a `design.md` file at the root of your project. From that moment on
 
 ### 5. Iterate
 
-- Author with `/pencil-design`.
+- Author with `/pencil-design` (it enforces the safe-apply discipline: no `replace_all_matching_properties` for `$`-values, ever).
 - Before committing, run `/pencil-audit`.
+- If `/pencil-audit` reports R5 corruption blockers, restore every `\$X` → `$X` via `batch_design` U() ops (the audit report includes a ready-to-adapt recipe). Re-run the audit before touching R1/R3.
 - When the design is frozen, run `/pencil-to-code` to produce production code.
 
 That's the loop.
 
 ---
 
-## The four house rules
+## The five house rules
 
-Every tool in this plugin enforces the same four rules. If you only remember one thing, remember these.
+Every tool in this plugin enforces the same rules. If you only remember one thing, remember these. **Priority when multiple rules flag the same node: R5 > R1 > R3 > R2.**
 
 - **R1 — Variable-first tokens.** When a token exists for a value, reference `$token` instead of the literal. Pencil variables are the single source of truth for color, spacing, typography, and radius vocabulary.
 - **R2 — Extract at the second repetition.** Do not componentize on the first instance. The second time the same structure appears, promote it to a reusable component. This avoids both hard-coding sprawl and premature abstraction.
 - **R3 — Universal 4px-grid sizing scale.** Every pixel value comes from one numeric scale (framework-agnostic, defined in `references/tailwind-scale.md`). The scale happens to coincide with Tailwind v4's default scale, which is convenient when transpiling, but the rule applies to any codebase.
 - **R4 — Viewport frame naming.** Top-level frames use the pattern `<PascalFeatureName>__<device>-<bp>-<width>` with exactly six allowed descriptor blocks (`mobile-base-375`, `mobile-lg-sm-640`, `tablet-md-768`, `laptop-lg-1024`, `desktop-xl-1280`, `desktop-lg-2xl-1536`). Grep-able, viewport-aware, unambiguous.
+- **R5 — Variable-reference integrity (release blocker).** String-valued properties must use canonical `$token` references, never `\$token` (literal backslash + `$`). The corrupted form arises when `replace_all_matching_properties` is used to promote values to variable references — the tool silently escapes `$`, and the resulting string does NOT resolve to the declared variable. Renderers fall back to defaults (usually black) and the design silently breaks. Detected by `/pencil-audit`, repaired via explicit `batch_design` U() ops that preserve `$` literally. **Never use `replace_all_matching_properties` for any `to:` value starting with `$`.**
 
 ---
 
@@ -108,10 +110,13 @@ The brief is the reason on-scale choices stay *mood-coherent* across a whole des
 
 Runs `pencil-auditor` against the project and returns its report verbatim. The auditor identifies:
 
+- Corrupted variable references (R5, release blocker) — e.g. `fill="\$white"` that fails to resolve.
 - Off-scale values (R3).
 - Literals where a token exists (R1).
 - Repeated structures that should be components (R2).
 - Design/code parity drift (same value defined differently in `.pen` vs. code).
+
+R5 runs first because corruption invalidates any other finding on the same property. If R5 reports blockers, restore every `\$X` → `$X` via `batch_design` with explicit `U(nodeId, { prop: "$token" })` ops (the audit report includes an inline recipe) before acting on R1/R3. Never use `replace_all_matching_properties` for `$`-values — it is the origin of R5 corruption.
 
 The skill never modifies files. It reports; you fix.
 
@@ -142,7 +147,7 @@ The plugin ships three subagents. None of them mutate files — they observe, re
 
 #### `pencil-auditor` — quality enforcer
 
-- **Purpose.** Systematically enforce the four house rules across both the `.pen` and the companion codebase. Finds off-scale values (R3), literals where a token exists (R1), repeated structures that should be components (R2), and parity drift between design and code.
+- **Purpose.** Systematically enforce the house rules across both the `.pen` and the companion codebase. Finds corrupted variable references (R5, release blocker), off-scale values (R3), literals where a token exists (R1), repeated structures that should be components (R2), and parity drift between design and code.
 - **Invoked by.** `/pencil-audit`. The skill returns the auditor's report verbatim — no summary layer, no reformat.
 - **Returns.** A structured divergence report (one line per finding) or a clean-status confirmation. Never modifies `.pen` files or source code.
 - **Runtime profile.** `model: sonnet`, `effort: medium`, `maxTurns: 25`. Sonnet balances rigor and speed — auditing is mostly rule-matching, which does not need Opus-level reasoning, but it does need enough quality to distinguish "valid off-scale exception" from "drift". Medium turn budget matches the breadth of a typical audit sweep.

@@ -102,6 +102,32 @@ Repeated frame structures that could be extracted to reusable components. Light-
 
 Skip R2 entirely if you cannot produce confident candidates - better no finding than a noisy one.
 
+### R5 - Variable-reference integrity
+
+String-valued properties (`fill`, `stroke.fill`, `cornerRadius` when scalar, `textColor`, `padding` when tokenized, `gap` when tokenized) that contain a corrupted variable reference. A corrupted reference is any string whose prefix is `\$` (literal backslash + `$`) rather than the canonical `$`. These arise when a writer tool escapes `$` — notably `replace_all_matching_properties` when used to promote hex/numeric values to variable references. The resulting value is a literal string that does NOT resolve to the declared variable; downstream renderers treat it as an unknown color/value and fall back to defaults (usually black), silently ruining the design.
+
+**How to check**:
+
+1. `batch_get` each top-level frame with `readDepth: 20` (or deeper if necessary).
+2. Scan the returned JSON for any value whose string starts with `\\$` (in JSON: the two characters `\` and `$`).
+3. Report every occurrence as **R5 corrupted variable reference**.
+
+**Example finding**:
+
+```
+design/ui.pen#heroTitle - fill="\$white" -> corrupted; should be "$white" (restore via batch_design U())
+design/ui.pen#card1 - cornerRadius="\$radius-md" -> corrupted; should be "$radius-md"
+design/ui.pen#card2 - stroke.fill="\$gray-200" -> corrupted; should be "$gray-200"
+```
+
+**Why R5 is critical**: Unlike R1/R3 which flag stylistic drift, R5 flags values that render incorrectly. Any R5 finding is a release blocker — the design is actively broken until every `\$X` is restored to `$X`.
+
+**How to fix (referenced for the report's Recommendations section)**:
+
+- **Never** use `replace_all_matching_properties` with a `to:` value that begins with `$`. That tool escapes `$` internally and stores `\$token`, which is the exact corruption R5 detects.
+- Restore via `batch_design` with explicit `U(nodeId, {prop: "$token"})` operations — `batch_design` preserves `$` literally.
+- Validate with a post-fix `batch_get` on the same nodes and confirm no `\\$` strings remain.
+
 ### R3 - Scale parity
 
 Values outside the allowed scale (spacing, font sizes, radii, line heights, breakpoints).
@@ -130,7 +156,7 @@ Report each match as `file:line` + the offending value + the recommended native 
 
 ### Rule priority
 
-When multiple rules flag the same node, prefer the most specific diagnostic. Order: R1 (variable) > R3 (scale) > R2 (reuse).
+When multiple rules flag the same node, prefer the most specific diagnostic. Order: **R5 (corruption) > R1 (variable) > R3 (scale) > R2 (reuse)**. R5 takes precedence because it describes a broken render, not a style choice.
 
 ## Workflow
 
@@ -140,7 +166,17 @@ When multiple rules flag the same node, prefer the most specific diagnostic. Ord
 - Read `package.json` (and any relevant manifest) to detect the styling technology and infer code globs.
 - If no code files exist at standard paths, skip the code portion of R3 but still run R1/R2/R3 against `.pen` files.
 
-### Step 2 - R1 + R3 on Pencil (per `.pen` file)
+### Step 2 - R5 on Pencil (corruption scan — runs first)
+
+For each `.pen` file found, scan top-level frames for corrupted variable references. R5 runs before R1/R3 because corruption invalidates any other finding on the same property.
+
+1. `batch_get` each top-level frame with `readDepth: 20`.
+2. Parse the returned JSON for any value matching the regex `^\\\\\\$` (string starting with literal `\` then `$`).
+3. Record the node id, property path, and corrupted value.
+
+If R5 detects any finding, emit an explicit **"release blocker"** note in the Summary — R5 findings MUST be fixed before R1/R3 findings are actionable, because tokenizing an already-corrupted property would compound damage.
+
+### Step 3 - R1 + R3 on Pencil (per `.pen` file)
 
 For each `.pen` file found:
 
@@ -151,15 +187,15 @@ For each `.pen` file found:
 
 Keep per-frame-id drill-downs minimal - only if a batched query indicates something is off and you need to find the specific node.
 
-### Step 3 - R3 on code
+### Step 4 - R3 on code
 
 Grep the project's source globs for off-scale values. Use the Tailwind-arbitrary patterns if Tailwind was detected; otherwise use the raw-CSS-property pattern.
 
-### Step 4 - R2 on Pencil (best-effort)
+### Step 5 - R2 on Pencil (best-effort)
 
 Scan top-level frames for repeated child-structure patterns. Only report obvious candidates.
 
-### Step 5 - Output report
+### Step 6 - Output report
 
 Emit the report in this structure:
 
@@ -170,10 +206,14 @@ Emit the report in this structure:
 - Pencil files scanned: N
 - Code files scanned: N
 - Styling technology detected: <tailwind|vanilla-css|css-modules|styled-components|emotion|...>
+- R5 (corruption) blockers: N
 - R1 (variable) divergences: N
 - R2 (reuse) candidates: N
 - R3 (scale) divergences: N
-- Overall: PASS  (or  FAIL - <N> total issues)
+- Overall: PASS  (or  FAIL - <N> total issues  — if any R5, append "RELEASE BLOCKER: corruption detected")
+
+## R5 - Corrupted variable references (release blocker)
+<file>#<node_id> - <property>=<corrupted-value> -> restore to <intended-token>
 
 ## R1 - Variable-first violations
 <file>#<frame_id> - <property>=<raw-value> -> should reference <token> (declared as <value>)
@@ -189,6 +229,17 @@ Emit the report in this structure:
 
 ## Recommendations
 <specific, prioritized actions>
+- If any R5 findings exist, instruct the user to restore every `\$X` to `$X` via `batch_design` U() ops BEFORE acting on any other finding. Recipe:
+  ```
+  batch_design([
+    U("<nodeId>", { fill: "$white" }),
+    U("<nodeId>", { stroke: { fill: "$gray-200", thickness: 1 } }),
+    U("<nodeId>", { cornerRadius: "$radius-md" }),
+  ])
+  ```
+  After the batch, re-run `batch_get` on the same nodes and confirm zero `\$` strings remain. Screenshot the root frame to visually confirm no black fallbacks.
+- Under NO circumstance recommend `replace_all_matching_properties` for promoting values to variable references. That tool escapes `$` into `\$` and is the origin of R5 corruption. `batch_design` U() with explicit `"$token"` strings is the only safe path.
+- For nested properties (`stroke`, `effects[*].shadow`, etc.), pass the full object — `U(id, { stroke: { fill: "$X", thickness: 1 } })` — not dot-path keys. Dot-path keys silently no-op on some property shapes.
 ```
 
 If zero divergences, output exactly:
