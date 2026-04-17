@@ -1,6 +1,6 @@
 # pencil-atelier
 
-A Claude Code plugin that turns [Pencil](https://pencil.so) (`.pen`) design files and their companion codebase into a single, consistent, auditable design system — regardless of which CSS framework the project uses.
+A Claude Code plugin that turns [Pencil](https://pencil.dev) (`.pen`) design files and their companion codebase into a single, consistent, auditable design system — regardless of which CSS framework the project uses.
 
 ---
 
